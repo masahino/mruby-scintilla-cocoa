@@ -39,3 +39,24 @@ assert('Scintilla::ScintillaCocoa rejects an invalid notification callback') do
     view.notification_callback = Object.new
   end
 end
+
+assert('Scintilla::ScintillaCocoa gets its document pointer') do
+  view = Scintilla::ScintillaCocoa.new
+
+  assert_kind_of Scintilla::Document, view.sci_get_docpointer
+end
+
+assert('Scintilla::ScintillaCocoa switches document pointers') do
+  view = Scintilla::ScintillaCocoa.new
+  original_document = view.sci_get_docpointer
+
+  view.sci_set_docpointer(nil)
+  assert_not_equal original_document, view.sci_get_docpointer
+end
+
+assert('Scintilla::ScintillaCocoa adds a document reference') do
+  view = Scintilla::ScintillaCocoa.new
+  document = view.sci_get_docpointer
+
+  assert_equal 0, view.sci_add_refdocument(document)
+end

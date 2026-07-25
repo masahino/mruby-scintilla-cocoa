@@ -16,6 +16,14 @@ typedef struct {
   mrb_value self;
 } scintilla_cocoa_data;
 
+typedef struct {
+  sptr_t pointer;
+} scintilla_cocoa_document_data;
+
+static const struct mrb_data_type scintilla_cocoa_document_type = {
+  "Document", mrb_free
+};
+
 @interface MrubyScintillaNotificationDelegate
   : NSObject <ScintillaNotificationProtocol>
 {
@@ -198,6 +206,59 @@ scintilla_cocoa_native_handle(mrb_state *mrb, mrb_value self)
 }
 
 static mrb_value
+scintilla_cocoa_send_message_get_docpointer(mrb_state *mrb, mrb_value self)
+{
+  scintilla_cocoa_data *data = (scintilla_cocoa_data *)DATA_PTR(self);
+  scintilla_cocoa_document_data *document;
+  mrb_int message;
+  mrb_int wparam = 0;
+  mrb_int lparam = 0;
+  sptr_t pointer;
+
+  mrb_get_args(mrb, "i|ii", &message, &wparam, &lparam);
+  pointer = [data->view message:(unsigned int)message
+                         wParam:(uptr_t)wparam
+                         lParam:(sptr_t)lparam];
+  if (pointer == 0) {
+    return mrb_nil_value();
+  }
+
+  document = (scintilla_cocoa_document_data *)mrb_malloc(
+    mrb, sizeof(*document)
+  );
+  document->pointer = pointer;
+  return mrb_obj_value(mrb_data_object_alloc(
+    mrb,
+    mrb_class_get_under(
+      mrb, mrb_module_get(mrb, "Scintilla"), "Document"
+    ),
+    document,
+    &scintilla_cocoa_document_type
+  ));
+}
+
+static mrb_value
+scintilla_cocoa_send_message_set_docpointer(mrb_state *mrb, mrb_value self)
+{
+  scintilla_cocoa_data *data = (scintilla_cocoa_data *)DATA_PTR(self);
+  scintilla_cocoa_document_data *document;
+  mrb_value document_value;
+  mrb_int message;
+  sptr_t pointer = 0;
+  sptr_t result;
+
+  mrb_get_args(mrb, "io", &message, &document_value);
+  if (!mrb_nil_p(document_value) && !mrb_integer_p(document_value)) {
+    document = (scintilla_cocoa_document_data *)DATA_PTR(document_value);
+    pointer = document->pointer;
+  }
+  result = [data->view message:(unsigned int)message
+                        wParam:0
+                        lParam:pointer];
+  return mrb_int_value(mrb, result);
+}
+
+static mrb_value
 scintilla_cocoa_set_notification_callback(mrb_state *mrb, mrb_value self)
 {
   mrb_value callback;
@@ -234,6 +295,14 @@ mrb_mruby_scintilla_cocoa_gem_init(mrb_state *mrb)
   mrb_define_method(
     mrb, cocoa, "native_handle",
     scintilla_cocoa_native_handle, MRB_ARGS_NONE()
+  );
+  mrb_define_method(
+    mrb, cocoa, "send_message_get_docpointer",
+    scintilla_cocoa_send_message_get_docpointer, MRB_ARGS_ARG(1, 2)
+  );
+  mrb_define_method(
+    mrb, cocoa, "send_message_set_docpointer",
+    scintilla_cocoa_send_message_set_docpointer, MRB_ARGS_REQ(2)
   );
   mrb_define_method(
     mrb, cocoa, "notification_callback=",

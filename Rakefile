@@ -20,6 +20,11 @@ task compile: :mruby do
   sh "cd mruby && #{RAKE} all MRUBY_CONFIG=#{MRUBY_CONFIG}"
 end
 
+desc 'Run mruby-scintilla-cocoa tests'
+task test: :mruby do
+  sh "cd mruby && #{RAKE} all test MRUBY_CONFIG=#{MRUBY_CONFIG}"
+end
+
 desc 'Clean generated build files'
 task :clean do
   next unless File.directory?('mruby')

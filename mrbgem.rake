@@ -44,12 +44,17 @@ MRuby::Gem::Specification.new('mruby-scintilla-cocoa') do |spec|
     ].map { |part| Shellwords.escape(part) }.join(' ')
   end
 
-  [cc, cxx, objc, mruby.cc, mruby.cxx, mruby.objc].each do |compiler|
-    compiler.include_paths << "#{source_dir}/include"
-    compiler.include_paths << cocoa_dir
+  task :mruby_scintilla_cocoa_compile_option do
+    [cc, cxx, objc, mruby.cc, mruby.cxx, mruby.objc].each do |compiler|
+      compiler.include_paths << "#{source_dir}/include"
+      compiler.include_paths << cocoa_dir
+    end
   end
 
-  file "#{dir}/src/scintilla-cocoa.m" => framework
+  file "#{dir}/src/scintilla-cocoa.m" => [
+    :mruby_scintilla_cocoa_compile_option,
+    framework
+  ]
 
   linker.flags_before_libraries << "-F#{framework_dir}/Release"
   linker.flags_before_libraries << '-framework Scintilla'

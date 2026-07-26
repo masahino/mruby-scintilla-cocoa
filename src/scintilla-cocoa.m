@@ -3,6 +3,7 @@
 #import "ScintillaView.h"
 
 #include <mruby.h>
+#include <mruby/array.h>
 #include <mruby/class.h>
 #include <mruby/data.h>
 #include <mruby/hash.h>
@@ -205,6 +206,167 @@ scintilla_cocoa_native_handle(mrb_state *mrb, mrb_value self)
   return mrb_int_value(mrb, (mrb_int)(intptr_t)data->view);
 }
 
+static uptr_t
+scintilla_cocoa_wparam(mrb_state *mrb, mrb_value value)
+{
+  if (mrb_integer_p(value)) {
+    return (uptr_t)mrb_integer(value);
+  }
+  if (mrb_string_p(value)) {
+    return (uptr_t)RSTRING_PTR(value);
+  }
+  if (mrb_true_p(value)) {
+    return 1;
+  }
+  if (mrb_nil_p(value) || mrb_false_p(value)) {
+    return 0;
+  }
+  mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid Scintilla parameter");
+  return 0;
+}
+
+static mrb_value
+scintilla_cocoa_send_message_get_str(mrb_state *mrb, mrb_value self)
+{
+  scintilla_cocoa_data *data = (scintilla_cocoa_data *)DATA_PTR(self);
+  mrb_value wparam_value = mrb_nil_value();
+  mrb_int message;
+  mrb_int argc;
+  uptr_t wparam = 0;
+  sptr_t length;
+  char *value;
+  mrb_value result;
+
+  argc = mrb_get_args(mrb, "i|o", &message, &wparam_value);
+  if (argc > 1) {
+    wparam = scintilla_cocoa_wparam(mrb, wparam_value);
+  }
+  length = [data->view message:(unsigned int)message
+                        wParam:wparam
+                        lParam:0];
+  value = (char *)mrb_calloc(mrb, (size_t)length + 1, sizeof(char));
+  [data->view message:(unsigned int)message
+               wParam:wparam
+               lParam:(sptr_t)value];
+  result = mrb_str_new_cstr(mrb, value);
+  mrb_free(mrb, value);
+  return result;
+}
+
+static mrb_value
+scintilla_cocoa_send_message_get_text(mrb_state *mrb, mrb_value self)
+{
+  scintilla_cocoa_data *data = (scintilla_cocoa_data *)DATA_PTR(self);
+  mrb_int message;
+  mrb_int length;
+  char *text;
+  mrb_value result;
+
+  mrb_get_args(mrb, "ii", &message, &length);
+  if (length <= 0) {
+    return mrb_str_new_lit(mrb, "");
+  }
+  text = (char *)mrb_calloc(mrb, (size_t)length + 1, sizeof(char));
+  [data->view message:(unsigned int)message
+               wParam:(uptr_t)length
+               lParam:(sptr_t)text];
+  result = mrb_str_new_cstr(mrb, text);
+  mrb_free(mrb, text);
+  return result;
+}
+
+static mrb_value
+scintilla_cocoa_send_message_get_text_range(mrb_state *mrb, mrb_value self)
+{
+  scintilla_cocoa_data *data = (scintilla_cocoa_data *)DATA_PTR(self);
+  mrb_int message;
+  mrb_int start;
+  mrb_int finish;
+  struct Sci_TextRange range;
+  mrb_value result;
+
+  mrb_get_args(mrb, "iii", &message, &start, &finish);
+  if (finish < start) {
+    mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid text range");
+  }
+  range.chrg.cpMin = start;
+  range.chrg.cpMax = finish;
+  range.lpstrText = (char *)mrb_calloc(
+    mrb, (size_t)(finish - start) + 1, sizeof(char)
+  );
+  [data->view message:(unsigned int)message
+               wParam:0
+               lParam:(sptr_t)&range];
+  result = mrb_str_new(mrb, range.lpstrText, finish - start);
+  mrb_free(mrb, range.lpstrText);
+  return result;
+}
+
+static mrb_value
+scintilla_cocoa_send_message_get_curline(mrb_state *mrb, mrb_value self)
+{
+  scintilla_cocoa_data *data = (scintilla_cocoa_data *)DATA_PTR(self);
+  sptr_t length;
+  sptr_t position;
+  char *text;
+  mrb_value result;
+
+  length = [data->view message:SCI_GETCURLINE wParam:0 lParam:0] + 1;
+  text = (char *)mrb_calloc(mrb, (size_t)length, sizeof(char));
+  position = [data->view message:SCI_GETCURLINE
+                           wParam:(uptr_t)length
+                           lParam:(sptr_t)text];
+  result = mrb_ary_new_capa(mrb, 2);
+  mrb_ary_push(mrb, result, mrb_str_new_cstr(mrb, text));
+  mrb_ary_push(mrb, result, mrb_int_value(mrb, position));
+  mrb_free(mrb, text);
+  return result;
+}
+
+static mrb_value
+scintilla_cocoa_send_message_get_line(mrb_state *mrb, mrb_value self)
+{
+  scintilla_cocoa_data *data = (scintilla_cocoa_data *)DATA_PTR(self);
+  mrb_int line;
+  sptr_t length;
+  char *text;
+  mrb_value result;
+
+  mrb_get_args(mrb, "i", &line);
+  length = [data->view message:SCI_LINELENGTH
+                          wParam:(uptr_t)line
+                          lParam:0];
+  text = (char *)mrb_calloc(mrb, (size_t)length + 1, sizeof(char));
+  [data->view message:SCI_GETLINE
+               wParam:(uptr_t)line
+               lParam:(sptr_t)text];
+  result = mrb_str_new(mrb, text, length);
+  mrb_free(mrb, text);
+  return result;
+}
+
+static mrb_value
+scintilla_cocoa_send_message_set_pointer(mrb_state *mrb, mrb_value self)
+{
+  scintilla_cocoa_data *data = (scintilla_cocoa_data *)DATA_PTR(self);
+  mrb_int message;
+  mrb_value pointer_value;
+  void *pointer = NULL;
+  sptr_t result;
+
+  mrb_get_args(mrb, "io", &message, &pointer_value);
+  if (!mrb_nil_p(pointer_value)) {
+    if (mrb_type(pointer_value) != MRB_TT_CPTR) {
+      mrb_raise(mrb, E_ARGUMENT_ERROR, "pointer must be a C pointer");
+    }
+    pointer = mrb_cptr(pointer_value);
+  }
+  result = [data->view message:(unsigned int)message
+                        wParam:0
+                        lParam:(sptr_t)pointer];
+  return mrb_int_value(mrb, result);
+}
+
 static mrb_value
 scintilla_cocoa_send_message_get_docpointer(mrb_state *mrb, mrb_value self)
 {
@@ -295,6 +457,30 @@ mrb_mruby_scintilla_cocoa_gem_init(mrb_state *mrb)
   mrb_define_method(
     mrb, cocoa, "native_handle",
     scintilla_cocoa_native_handle, MRB_ARGS_NONE()
+  );
+  mrb_define_method(
+    mrb, cocoa, "send_message_get_str",
+    scintilla_cocoa_send_message_get_str, MRB_ARGS_ARG(1, 1)
+  );
+  mrb_define_method(
+    mrb, cocoa, "send_message_get_text",
+    scintilla_cocoa_send_message_get_text, MRB_ARGS_REQ(2)
+  );
+  mrb_define_method(
+    mrb, cocoa, "send_message_get_text_range",
+    scintilla_cocoa_send_message_get_text_range, MRB_ARGS_REQ(3)
+  );
+  mrb_define_method(
+    mrb, cocoa, "send_message_get_curline",
+    scintilla_cocoa_send_message_get_curline, MRB_ARGS_NONE()
+  );
+  mrb_define_method(
+    mrb, cocoa, "send_message_get_line",
+    scintilla_cocoa_send_message_get_line, MRB_ARGS_REQ(1)
+  );
+  mrb_define_method(
+    mrb, cocoa, "send_message_set_pointer",
+    scintilla_cocoa_send_message_set_pointer, MRB_ARGS_REQ(2)
   );
   mrb_define_method(
     mrb, cocoa, "send_message_get_docpointer",

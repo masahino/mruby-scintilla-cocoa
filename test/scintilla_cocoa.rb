@@ -60,3 +60,37 @@ assert('Scintilla::ScintillaCocoa adds a document reference') do
 
   assert_equal 0, view.sci_add_refdocument(document)
 end
+
+assert('Scintilla::ScintillaCocoa gets text') do
+  view = Scintilla::ScintillaCocoa.new
+  view.sci_set_text('abcdefg')
+
+  assert_equal 'abc', view.sci_get_text(3)
+end
+
+assert('Scintilla::ScintillaCocoa gets target text and a text range') do
+  view = Scintilla::ScintillaCocoa.new
+  view.sci_set_text('abcdefg')
+  view.sci_set_target_start(1)
+  view.sci_set_target_end(5)
+
+  assert_equal 'bcde', view.sci_get_target_text
+  assert_equal 'cde', view.sci_get_text_range(2, 5)
+end
+
+assert('Scintilla::ScintillaCocoa gets the current line and a line') do
+  view = Scintilla::ScintillaCocoa.new
+  view.sci_set_text("abc\nxyz")
+  view.sci_goto_pos(2)
+
+  assert_equal ["abc\n", 2], view.sci_get_curline
+  assert_equal 'xyz', view.sci_get_line(1)
+end
+
+assert('Scintilla::ScintillaCocoa sets a lexer pointer') do
+  view = Scintilla::ScintillaCocoa.new
+  lexer = Scintilla.create_lexer('ruby')
+
+  view.sci_set_ilexer(lexer)
+  assert_equal 'ruby', view.sci_get_lexer_language
+end

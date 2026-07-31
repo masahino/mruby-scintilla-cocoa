@@ -94,3 +94,10 @@ assert('Scintilla::ScintillaCocoa sets a lexer pointer') do
   view.sci_set_ilexer(lexer)
   assert_equal 'ruby', view.sci_get_lexer_language
 end
+
+assert('Scintilla::ScintillaCocoa sets a lexer by language name') do
+  view = Scintilla::ScintillaCocoa.new
+
+  view.sci_set_lexer_language('ruby')
+  assert_equal 'ruby', view.sci_get_lexer_language
+end

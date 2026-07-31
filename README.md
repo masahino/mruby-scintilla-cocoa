@@ -62,6 +62,13 @@ view.sci_set_ilexer(lexer)
 view.sci_get_lexer_language                # => "ruby"
 ```
 
+For compatibility with the other mruby-scintilla frontends, the lexer can also
+be selected directly by language name:
+
+```ruby
+view.sci_set_lexer_language("ruby")
+```
+
 Document pointers are represented by `Scintilla::Document` objects. Keep the
 normal Scintilla reference-counting rules when sharing a document between
 multiple views.

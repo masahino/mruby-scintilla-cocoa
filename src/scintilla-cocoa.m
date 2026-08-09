@@ -9,6 +9,7 @@
 #include <mruby/hash.h>
 #include <mruby/string.h>
 #include <mruby/variable.h>
+#include <string.h>
 
 typedef struct {
   ScintillaView *view;
@@ -58,12 +59,18 @@ notification_hash_set(mrb_state *mrb, mrb_value hash, const char *key,
   mrb_value callback =
     mrb_iv_get(mrb, data->self, mrb_intern_lit(mrb, "@notification_callback"));
   mrb_value hash;
+  mrb_int text_length;
 
   if (mrb_nil_p(callback)) {
     return;
   }
 
   hash = mrb_hash_new_capa(mrb, 20);
+  text_length = (mrb_int)notification->length;
+  if (notification->text != NULL &&
+      notification->nmhdr.code == SCN_URIDROPPED) {
+    text_length = (mrb_int)strlen(notification->text);
+  }
   notification_hash_set(mrb, hash, "code",
                         mrb_int_value(mrb, notification->nmhdr.code));
   notification_hash_set(mrb, hash, "id",
@@ -79,13 +86,13 @@ notification_hash_set(mrb_state *mrb, mrb_value hash, const char *key,
   if (notification->text != NULL) {
     notification_hash_set(
       mrb, hash, "text",
-      mrb_str_new(mrb, notification->text, notification->length)
+      mrb_str_new(mrb, notification->text, text_length)
     );
   } else {
     notification_hash_set(mrb, hash, "text", mrb_nil_value());
   }
   notification_hash_set(mrb, hash, "length",
-                        mrb_int_value(mrb, notification->length));
+                        mrb_int_value(mrb, text_length));
   notification_hash_set(mrb, hash, "lines_added",
                         mrb_int_value(mrb, notification->linesAdded));
   notification_hash_set(mrb, hash, "message",

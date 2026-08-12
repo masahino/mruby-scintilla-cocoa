@@ -66,11 +66,6 @@ notification_hash_set(mrb_state *mrb, mrb_value hash, const char *key,
   }
 
   hash = mrb_hash_new_capa(mrb, 20);
-  text_length = (mrb_int)notification->length;
-  if (notification->text != NULL &&
-      notification->nmhdr.code == SCN_URIDROPPED) {
-    text_length = (mrb_int)strlen(notification->text);
-  }
   notification_hash_set(mrb, hash, "code",
                         mrb_int_value(mrb, notification->nmhdr.code));
   notification_hash_set(mrb, hash, "id",
@@ -84,10 +79,7 @@ notification_hash_set(mrb_state *mrb, mrb_value hash, const char *key,
   notification_hash_set(mrb, hash, "modification_type",
                         mrb_int_value(mrb, notification->modificationType));
   if (notification->text != NULL) {
-    notification_hash_set(
-      mrb, hash, "text",
-      mrb_str_new(mrb, notification->text, text_length)
-    );
+    notification_hash_set(mrb, hash, "text", mrb_str_new_cstr(mrb, notification->text));
   } else {
     notification_hash_set(mrb, hash, "text", mrb_nil_value());
   }

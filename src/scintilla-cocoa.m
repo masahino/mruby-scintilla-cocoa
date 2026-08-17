@@ -59,7 +59,6 @@ notification_hash_set(mrb_state *mrb, mrb_value hash, const char *key,
   mrb_value callback =
     mrb_iv_get(mrb, data->self, mrb_intern_lit(mrb, "@notification_callback"));
   mrb_value hash;
-  mrb_int text_length;
 
   if (mrb_nil_p(callback)) {
     return;
@@ -84,7 +83,7 @@ notification_hash_set(mrb_state *mrb, mrb_value hash, const char *key,
     notification_hash_set(mrb, hash, "text", mrb_nil_value());
   }
   notification_hash_set(mrb, hash, "length",
-                        mrb_int_value(mrb, text_length));
+                        mrb_int_value(mrb, notification->length));
   notification_hash_set(mrb, hash, "lines_added",
                         mrb_int_value(mrb, notification->linesAdded));
   notification_hash_set(mrb, hash, "message",

@@ -77,10 +77,14 @@ notification_hash_set(mrb_state *mrb, mrb_value hash, const char *key,
                         mrb_int_value(mrb, notification->modifiers));
   notification_hash_set(mrb, hash, "modification_type",
                         mrb_int_value(mrb, notification->modificationType));
-  if (notification->text != NULL) {
-    notification_hash_set(mrb, hash, "text", mrb_str_new_cstr(mrb, notification->text));
-  } else {
+  if (notification->text == NULL) {
     notification_hash_set(mrb, hash, "text", mrb_nil_value());
+  } else if (notification->nmhdr.code == SCN_MODIFIED) {
+    notification_hash_set(mrb, hash, "text",
+                          mrb_str_new(mrb, notification->text, notification->length));
+  } else {
+    notification_hash_set(mrb, hash, "text",
+                          mrb_str_new_cstr(mrb, notification->text));
   }
   notification_hash_set(mrb, hash, "length",
                         mrb_int_value(mrb, notification->length));

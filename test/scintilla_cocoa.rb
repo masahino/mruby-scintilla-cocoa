@@ -19,6 +19,30 @@ assert('Scintilla::ScintillaCocoa notification callback') do
   assert_true modified.key?('lines_added')
 end
 
+assert('Scintilla::ScintillaCocoa limits undo notification text to length') do
+  view = Scintilla::ScintillaCocoa.new
+  notifications = []
+
+  view.notification_callback = lambda do |notification|
+    notifications << notification
+  end
+  view.SCI_EMPTYUNDOBUFFER
+  view.SCI_ADDTEXT(4, 'test')
+  notifications.clear
+  view.SCI_UNDO
+
+  modified = notifications.find do |notification|
+    notification['code'] == Scintilla::SCN_MODIFIED &&
+      (notification['modification_type'] & Scintilla::SC_PERFORMED_UNDO) != 0 &&
+      (notification['modification_type'] & Scintilla::SC_MOD_DELETETEXT) != 0
+  end
+
+  assert_false modified.nil?
+  assert_equal 4, modified['length']
+  assert_equal 'test', modified['text']
+  assert_equal modified['length'], modified['text'].bytesize
+end
+
 assert('Scintilla::ScintillaCocoa disables notification callback with nil') do
   view = Scintilla::ScintillaCocoa.new
   notifications = []

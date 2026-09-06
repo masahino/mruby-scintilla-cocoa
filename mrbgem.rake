@@ -19,18 +19,16 @@ MRuby::Gem::Specification.new('mruby-scintilla-cocoa') do |spec|
   header = "#{cocoa_dir}/ScintillaView.h"
   framework_dir = "#{build_dir}/framework"
   framework = "#{framework_dir}/Release/Scintilla.framework"
-  lexilla = [
-    build.build_dir,
-    'mrbgems/mruby-scintilla-base/scintilla/lexilla/bin/liblexilla.a'
-  ].join('/')
 
   file header do
-    URI.open(archive_url) do |archive|
+    URI.open(archive_url, open_timeout: 10, read_timeout: 30) do |archive|
       FileUtils.mkdir_p(source_root)
       IO.popen("tar xfz - -C #{filename source_root}", 'wb') do |tar|
         tar.write(archive.read)
       end
+      raise "tar failed: #{archive_url} (#{$?.exitstatus})" unless $?.success?
     end
+    raise "#{header} not produced" unless File.exist?(header)
   end
 
   file framework => header do
@@ -45,6 +43,9 @@ MRuby::Gem::Specification.new('mruby-scintilla-cocoa') do |spec|
   end
 
   task :mruby_scintilla_cocoa_compile_option do
+    # mruby-scintilla-base is only registered once dependency resolution has
+    # run, so this lookup has to be deferred to task time.
+    linker.flags_before_libraries << build.gems['mruby-scintilla-base'].lexilla_archive
     [cc, cxx, objc, mruby.cc, mruby.cxx, mruby.objc].each do |compiler|
       compiler.include_paths << "#{source_dir}/include"
       compiler.include_paths << cocoa_dir
@@ -59,7 +60,6 @@ MRuby::Gem::Specification.new('mruby-scintilla-cocoa') do |spec|
   linker.flags_before_libraries << "-F#{framework_dir}/Release"
   linker.flags_before_libraries << '-framework Scintilla'
   linker.flags_before_libraries << '-framework Cocoa'
-  linker.flags_before_libraries << lexilla
   linker.flags_before_libraries << '-Wl,-rpath,@executable_path/../Frameworks'
   linker.flags_before_libraries << "-Wl,-rpath,#{framework_dir}/Release"
 end

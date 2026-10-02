@@ -1,7 +1,7 @@
 MRuby::Gem::Specification.new('mruby-scintilla-cocoa') do |spec|
   spec.license = 'MIT'
   spec.authors = 'masahino'
-  spec.version = '5.6.6'
+  spec.version = '5.6.7'
 
   raise 'mruby-scintilla-cocoa supports macOS only' unless RUBY_PLATFORM.include?('darwin')
 
@@ -11,7 +11,7 @@ MRuby::Gem::Specification.new('mruby-scintilla-cocoa') do |spec|
   require 'open-uri'
   require 'shellwords'
 
-  scintilla_version = '566'
+  scintilla_version = '567'
   archive_url = "https://www.scintilla.org/scintilla#{scintilla_version}.tgz"
   source_root = "#{build_dir}/scintilla"
   source_dir = "#{source_root}/scintilla"
